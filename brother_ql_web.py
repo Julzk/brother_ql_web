@@ -165,6 +165,37 @@ def image_to_png_bytes(im):
     image_buffer.seek(0)
     return image_buffer.read()
 
+@post('/api/print/image')
+@get('/api/print/image')
+def print_image():
+    import base64
+    #return {'success': True}
+    d = request.params.decode() # UTF-8 decoded form data
+    base64Image = d.get('base64')
+    im = Image.open(BytesIO(base64.b64decode(base64Image)))
+    im.save('/home/pi/brother_ql_web/from-post.png')
+    #return {'base64': base64Image}
+    labelSize = d.get('label_size', "62")
+    threshold = int(d.get('threshold', 70))
+    #cut = int(d.get('cut', "1"))
+    #threshold = int(d.get('threshold', 70))
+
+    red = False
+    if 'red' in labelSize:
+        red = True
+    cut = False
+    if '0' in d.get('cut', "1"):
+        cut = True
+
+    #return {'success': True}
+    qlr = BrotherQLRaster(CONFIG['PRINTER']['MODEL'])
+    create_label(qlr, im, labelSize, red=red, threshold=threshold, cut=cut, rotate=90)
+    be = BACKEND_CLASS(CONFIG['PRINTER']['PRINTER'])
+    be.write(qlr.data)
+    be.dispose()
+    del be
+    return {'success': True}
+
 @post('/api/print/text')
 @get('/api/print/text')
 def print_text():
